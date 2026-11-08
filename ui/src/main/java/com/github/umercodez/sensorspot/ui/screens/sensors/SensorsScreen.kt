@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -59,6 +60,9 @@ fun SensorsScreen(
             }
 
             viewModel.onEvent(event)
+        },
+        getSensorEventsFlow = { sensorType ->
+            viewModel.getSensorEventsFlow(sensorType)
         }
     )
 
@@ -68,7 +72,8 @@ fun SensorsScreen(
 @Composable
 fun SensorsScreen(
     state: SensorsScreenState,
-    onEvent: (SensorsScreenEvent) -> Unit
+    onEvent: (SensorsScreenEvent) -> Unit,
+    getSensorEventsFlow: ((Int) -> kotlinx.coroutines.flow.Flow<com.github.umercodez.sensorspot.data.sensoreventprovider.SensorEvent>)? = null
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -77,6 +82,9 @@ fun SensorsScreen(
             items = state.allSensors,
             key = { it.hashCode() }
         ) { sensor ->
+            val sensorEventsFlow = remember(sensor.type, getSensorEventsFlow) {
+                getSensorEventsFlow?.invoke(sensor.type)
+            }
             SensorItem(
                 modifier = Modifier.animateItem(),
                 sensor = sensor,
@@ -85,7 +93,8 @@ fun SensorsScreen(
                 checked = state.sensorSelectionState[sensor] == true,
                 onCheckedChange = {
                     onEvent(SensorsScreenEvent.OnSensorItemCheckedChange(sensor, it))
-                }
+                },
+                sensorEventsFlow = sensorEventsFlow
             )
         }
         item {

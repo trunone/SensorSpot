@@ -18,6 +18,7 @@
  */
 package com.github.umercodez.sensorspot.data.repositories.settings.sensor
 
+import com.github.umercodez.sensorspot.data.sensoreventprovider.SensorEvent
 import kotlinx.coroutines.flow.Flow
 
 interface SensorsRepository {
@@ -28,5 +29,5 @@ interface SensorsRepository {
     fun getSelectedSensorsAsFlow(): Flow<List<DeviceSensor>>
     suspend fun saveGpsSelectionState(state: Boolean)
     val gpsSelectionState: Flow<Boolean>
-
+    fun getSensorEventsFlow(sensorType: Int, samplingRate: Int = 200000): Flow<SensorEvent>
 }

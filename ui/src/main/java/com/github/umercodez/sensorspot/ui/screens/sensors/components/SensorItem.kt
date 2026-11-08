@@ -62,6 +62,11 @@ import com.github.umercodez.sensorspot.data.repositories.settings.sensor.DeviceS
 import com.github.umercodez.sensorspot.data.repositories.settings.sensor.accelerometer
 import com.github.umercodez.sensorspot.ui.SensorSpotTheme
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import com.github.umercodez.sensorspot.data.sensoreventprovider.SensorEvent
+import kotlinx.coroutines.flow.Flow
+
 @Composable
 fun SensorItem(
     sensor: DeviceSensor,
@@ -69,9 +74,29 @@ fun SensorItem(
     mqttTopic: String = "android/sensor",
     modifier: Modifier = Modifier,
     checked: Boolean = false,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    sensorEventsFlow: Flow<SensorEvent>? = null
 ) {
     var showDetails by remember { mutableStateOf(false) }
+    var currentValues by remember { mutableStateOf<List<Float>>(emptyList()) }
+    val history = remember { mutableStateListOf<List<Float>>() }
+
+    val isListening = showDetails || checked
+
+    LaunchedEffect(isListening, sensorEventsFlow) {
+        if (isListening && sensorEventsFlow != null) {
+            sensorEventsFlow.collect { event ->
+                currentValues = event.values
+                if (history.size >= 50) {
+                    history.removeAt(0)
+                }
+                history.add(event.values)
+            }
+        } else if (!isListening) {
+            currentValues = emptyList()
+            history.clear()
+        }
+    }
 
     Card(
         modifier = modifier
@@ -149,6 +174,15 @@ fun SensorItem(
                     SensorDetailRow(label = "Power", value = "${sensor.power}")
                     SensorDetailRow(label = "Resolution", value = "${sensor.resolution}")
                     SensorDetailRow(label = "Vendor", value = sensor.vendor)
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    SensorRawDataView(values = currentValues)
+
+                    SensorLiveChart(history = history)
                 }
             }
         }
