@@ -110,7 +110,8 @@ class SensorScreenViewModel @Inject constructor(
         _uiState.update {
             it.copy(locationPermissionGranted = locationPermissionUtil.isLocationPermissionGranted())
         }
-
     }
+
+    fun getSensorEventsFlow(sensorType: Int) = sensorsRepository.getSensorEventsFlow(sensorType)
 
 }

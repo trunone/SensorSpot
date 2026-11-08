@@ -30,7 +30,9 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.github.umercodez.sensorspot.data.injection.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -93,4 +95,34 @@ class SensorsRepositoryImp @Inject constructor(
         get()  = context.userPreferencesDataStore.data.map { pref ->
             pref[Key.GPS_ENABLED] ?: false
         }
+
+    override fun getSensorEventsFlow(sensorType: Int, samplingRate: Int): Flow<com.github.umercodez.sensorspot.data.sensoreventprovider.SensorEvent> {
+        return kotlinx.coroutines.flow.callbackFlow {
+            val sensor = sensorManager.getDefaultSensor(sensorType)
+            if (sensor == null) {
+                close()
+                return@callbackFlow
+            }
+
+            val listener = object : android.hardware.SensorEventListener {
+                override fun onSensorChanged(event: android.hardware.SensorEvent) {
+                    trySend(
+                        com.github.umercodez.sensorspot.data.sensoreventprovider.SensorEvent(
+                            type = event.sensor.stringType,
+                            values = event.values.toList(),
+                            timestamp = event.timestamp
+                        )
+                    )
+                }
+
+                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+            }
+
+            sensorManager.registerListener(listener, sensor, samplingRate)
+
+            awaitClose {
+                sensorManager.unregisterListener(listener, sensor)
+            }
+        }.flowOn(ioDispatcher)
+    }
 }

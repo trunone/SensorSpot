@@ -71,4 +71,5 @@ dependencies {
     implementation(libs.acra.mail)
     debugImplementation(libs.leakcanary.android)
 
+    testImplementation(libs.junit)
 }
